@@ -4,6 +4,7 @@ lxml
 beautifulsoup4
 pillow
 dlib
+cmake
 cloudscraper
 pysocks==1.7.1
 urllib3==1.24.3
