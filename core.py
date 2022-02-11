@@ -344,6 +344,8 @@ def print_files(path, leak_word, c_word, naming_rule, part, cn_sub, json_data, f
                 print("  <genre>无码</genre>", file=code)
             if hack_word != '':
                 print("  <genre>破解</genre>", file=code)
+            if series != '':
+                print("  <series>" + series + "</series>", file=code)
             try:
                 for i in tag:
                     print("  <genre>" + i + "</genre>", file=code)
