@@ -302,8 +302,8 @@ def print_files(path, leak_word, c_word, naming_rule, part, cn_sub, json_data, f
             print("  <sorttitle><![CDATA[" + naming_rule + "]]></sorttitle>", file=code)
             print("  <customrating>JP-18+</customrating>", file=code)
             print("  <mpaa>JP-18+</mpaa>", file=code)
-            print("  <set>", file=code)
-            print("  </set>", file=code)
+            if series != '':
+                print("  <set>" + series + "</set>", file=code)
             print("  <studio>" + studio + "</studio>", file=code)
             print("  <year>" + year + "</year>", file=code)
             print("  <outline><![CDATA[" + outline + "]]></outline>", file=code)
