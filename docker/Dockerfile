@@ -11,6 +11,7 @@ RUN apt-get update \
     && cd /jav \
     && ( pip install --no-cache-dir -r requirements.txt || true ) \
     && pip install --no-cache-dir requests lxml Beautifulsoup4 pillow \
+    && python -m pip install dlib-19.22.99-cp310-cp310-win_amd64.whl \
     && apt-get purge -y wget
 
 WORKDIR /jav
