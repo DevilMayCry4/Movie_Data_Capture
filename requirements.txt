@@ -1,4 +1,5 @@
---index-url https://pypi.tuna.tsinghua.edu.cn/simple
+#国内源
+#--index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
 requests
 dlib-bin
