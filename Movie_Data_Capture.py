@@ -352,7 +352,7 @@ def movie_lists(source_folder, regexstr: str) -> typing.List[str]:
     if conf.debug():
         print("开始获取全部文件夹文件") 
     # 匹配所有视频文件
-    video_files = find_video_files_optimized(source_folder,video_extensions)
+    video_files = find_files_hybrid_parallel(source_folder,video_extensions)
     start_Index = 0
     for full_name in video_files:
         start_Index += 1
@@ -714,22 +714,41 @@ def period(delta, pattern):
     d['m'], d['s'] = divmod(rem, 60)
     return pattern.format(**d)
     
-def find_video_files_optimized(source_dir, video_extensions):
-    """优化的视频文件查找函数"""
-    # 转换为小写集合以提高查找速度
-    ext_set = {ext.lower() for ext in video_extensions}
-    print(ext_set)
-    video_files = []
-    # 使用os.scandir()获得更好的性能
-    with os.scandir(source_dir) as entries:
-        for entry in entries:
-            if entry.is_file():
-                _, ext = os.path.splitext(entry.name)
-                print(ext)
-                if ext.lower() in ext_set:
-                    video_files.append(entry.path)
+def find_files_hybrid_parallel(root_dir, target_extensions, max_depth=None):
+    """混合进程线程并行查找"""
+    # 获取第一级子目录
+    root_path = Path(root_dir)
+    try:
+        first_level_dirs = [str(d) for d in root_path.iterdir() if d.is_dir()]
+    except (PermissionError, OSError):
+        first_level_dirs = []
     
-    return video_files
+    if not first_level_dirs:
+        return scan_directory_worker((root_dir, target_extensions, max_depth))
+    
+    # 准备进程参数
+    process_args = [(d, target_extensions, max_depth) for d in first_level_dirs]
+    
+    # 使用进程池处理大目录
+    cpu_count = mp.cpu_count()
+    max_processes = min(len(first_level_dirs), cpu_count)
+    
+    all_files = []
+    with ProcessPoolExecutor(max_workers=max_processes) as executor:
+        results = executor.map(scan_directory_worker, process_args)
+        for result in results:
+            all_files.extend(result)
+    
+    # 处理根目录下的直接文件
+    ext_set = {ext.lower() for ext in target_extensions}
+    try:
+        for file in root_path.iterdir():
+            if file.is_file() and file.suffix.lower() in ext_set:
+                all_files.append(str(file))
+    except (PermissionError, OSError):
+        pass
+    
+    return all_files
 
 
 if __name__ == '__main__':
