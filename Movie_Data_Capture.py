@@ -25,14 +25,14 @@ from core import core_main, core_main_no_net_op, moveFailedFolder, debug_print
 
 
 def check_update(local_version):
-    htmlcode = get_html("https://api.github.com/repos/yoshiko2/Movie_Data_Capture/releases/latest")
+    htmlcode = get_html("https://api.github.com/repos/DevilMayCry4/Movie_Data_Capture/releases/latest")
     data = json.loads(htmlcode)
     remote = int(data["tag_name"].replace(".", ""))
     local_version = int(local_version.replace(".", ""))
     if local_version < remote:
         print("[*]" + ("* New update " + str(data["tag_name"]) + " *").center(54))
         print("[*]" + "↓ Download ↓".center(54))
-        print("[*]https://github.com/yoshiko2/Movie_Data_Capture/releases")
+        print("[*]https://github.com/DevilMayCry4/Movie_Data_Capture/releases")
         print("[*]======================================================")
 
 
@@ -564,7 +564,7 @@ def main(args: tuple) -> Path:
             check_update(version)
             # Download Mapping Table, parallel version
             def fmd(f) -> typing.Tuple[str, Path]:
-                return ('https://raw.githubusercontent.com/yoshiko2/Movie_Data_Capture/master/MappingTable/' + f,
+                return ('https://raw.githubusercontent.com/DevilMayCry4/Movie_Data_Capture/master/MappingTable/' + f,
                         Path.home() / '.local' / 'share' / 'mdc' / f)
 
             map_tab = (fmd('mapping_actor.xml'), fmd('mapping_info.xml'), fmd('c_number.json'))
