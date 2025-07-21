@@ -320,7 +320,7 @@ def movie_lists(source_folder, regexstr: str) -> typing.List[str]:
     debug = conf.debug()
     nfo_skip_days = conf.nfo_skip_days()
     link_mode = conf.link_mode()
-    file_type = conf.media_type().lower().split(",")
+    video_extensions = conf.media_type().lower().split(",")
     trailerRE = re.compile(r'-trailer\.', re.IGNORECASE)
     cliRE = None
     if isinstance(regexstr, str) and len(regexstr):
@@ -350,12 +350,11 @@ def movie_lists(source_folder, regexstr: str) -> typing.List[str]:
     skip_failed_cnt, skip_nfo_days_cnt = 0, 0
     escape_folder_set = set(re.split("[,，]", conf.escape_folder()))
     if conf.debug():
-        print("开始获取全部文件夹文件")
-    video_extensions = ['*.mp4', '*.avi', '*.mkv', '*.mov', '*.wmv', '*.flv', '*.webm', '*.m4v']
+        print("开始获取全部文件夹文件") 
     # 匹配所有视频文件
     video_files = []
     for ext in video_extensions:
-        video_files.extend(source.glob(ext))
+        video_files.extend(source.glob("*" + ext))
     start_Index = 0
     for full_name in video_files:
         start_Index += 1
@@ -364,8 +363,6 @@ def movie_lists(source_folder, regexstr: str) -> typing.List[str]:
         if main_mode != 3 and set(full_name.parent.parts) & escape_folder_set:
             continue
         if not full_name.is_file():
-            continue
-        if not full_name.suffix.lower() in file_type:
             continue
         absf = str(full_name)
         if absf in failed_set:
