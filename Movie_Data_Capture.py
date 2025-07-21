@@ -352,9 +352,7 @@ def movie_lists(source_folder, regexstr: str) -> typing.List[str]:
     if conf.debug():
         print("开始获取全部文件夹文件") 
     # 匹配所有视频文件
-    video_files = []
-    for ext in video_extensions:
-        video_files.extend(source.glob("*" + ext))
+    video_files = find_video_files_optimized(source_folder,video_extensions)
     start_Index = 0
     for full_name in video_files:
         start_Index += 1
@@ -715,6 +713,22 @@ def period(delta, pattern):
     d['h'], rem = divmod(delta.seconds, 3600)
     d['m'], d['s'] = divmod(rem, 60)
     return pattern.format(**d)
+    
+def find_video_files_optimized(source_dir, video_extensions):
+    """优化的视频文件查找函数"""
+    # 转换为小写集合以提高查找速度
+    ext_set = {ext.lower() for ext in video_extensions}
+    
+    video_files = []
+    # 使用os.scandir()获得更好的性能
+    with os.scandir(source_dir) as entries:
+        for entry in entries:
+            if entry.is_file():
+                _, ext = os.path.splitext(entry.name)
+                if ext.lower() in ext_set:
+                    video_files.append(entry.path)
+    
+    return video_files
 
 
 if __name__ == '__main__':
