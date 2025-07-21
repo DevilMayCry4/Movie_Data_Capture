@@ -349,6 +349,8 @@ def movie_lists(source_folder, regexstr: str) -> typing.List[str]:
     source = Path(source_folder).resolve()
     skip_failed_cnt, skip_nfo_days_cnt = 0, 0
     escape_folder_set = set(re.split("[,，]", conf.escape_folder()))
+    if conf.debug():
+        print("开始获取全部文件夹文件")
     for full_name in source.glob(r'**/*'):
         if main_mode != 3 and set(full_name.parent.parts) & escape_folder_set:
             continue
@@ -393,6 +395,8 @@ def movie_lists(source_folder, regexstr: str) -> typing.List[str]:
     # 软连接方式，已经成功削刮的也需要从成功目录中检查.nfo更新天数，跳过N天内更新过的
     skip_numbers = set()
     success_folder = Path(conf.success_folder()).resolve()
+    if conf.debug():
+        print("开始获取成功文件夹文件")
     for f in success_folder.glob(r'**/*'):
         if not re.match(r'\.nfo$', f.suffix, re.IGNORECASE):
             continue
@@ -404,6 +408,8 @@ def movie_lists(source_folder, regexstr: str) -> typing.List[str]:
         skip_numbers.add(number.lower())
 
     rm_list = []
+    if conf.debug():
+        print("计算哪些文件不需要重复爬取")
     for f in total:
         n_number = get_number(False, os.path.basename(f))
         if n_number and n_number.lower() in skip_numbers:
@@ -620,6 +626,8 @@ def main(args: tuple) -> Path:
             create_data_and_move_with_custom_number(single_file_path, custom_number, oCC,
                                                     specified_source, specified_url)
     else:
+        if conf.debug():
+            print("开始获取")
         folder_path = conf.source_folder()
         if not isinstance(folder_path, str) or folder_path == '':
             folder_path = os.path.abspath(".")
