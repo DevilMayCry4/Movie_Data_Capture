@@ -412,7 +412,7 @@ def print_files(path, leak_word, c_word, naming_rule, part, cn_sub, json_data, f
                         print("  <tag>4k</tag>", file=code)
                     if iso:
                         print("  <tag>原盘</tag>", file=code)
-                    for i in tag:
+                    for i in tag and i != series:
                         print("  <tag>" + i + "</tag>", file=code)
                         if conf.debug():
                             print("标签是:"+i)
