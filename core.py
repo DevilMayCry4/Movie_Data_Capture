@@ -316,6 +316,7 @@ def print_files(path, leak_word, c_word, naming_rule, part, cn_sub, json_data, f
                 uncensored, hack, hack_word, _4k, fanart_path, poster_path, thumb_path, iso):
     title, studio, year, outline, runtime, director, actor_photo, release, number, cover, trailer, website, series, label = get_info(
         json_data)
+    conf = config.getInstance()
     if config.getInstance().main_mode() == 3:  # 模式3下，由于视频文件不做任何改变，.nfo文件必须和视频文件名称除后缀外完全一致，KODI等软件方可支持
         nfo_path = str(Path(filepath).with_suffix('.nfo'))
     else:
