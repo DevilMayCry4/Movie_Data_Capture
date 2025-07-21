@@ -413,19 +413,25 @@ def print_files(path, leak_word, c_word, naming_rule, part, cn_sub, json_data, f
                         print("  <tag>原盘</tag>", file=code)
                     for i in tag:
                         print("  <tag>" + i + "</tag>", file=code)
-            if cn_sub:
-                print("  <genre>中文字幕</genre>", file=code)
-            if liuchu:
-                print("  <genre>无码流出</genre>", file=code)
-            if uncensored:
-                print("  <genre>无码</genre>", file=code)
-            if hack:
-                print("  <genre>破解</genre>", file=code)
-            if _4k:
-                print("  <genre>4k</genre>", file=code)
+                        if conf.debug():
+                            print("标签是:"+i)
+            # if cn_sub:
+            #     print("  <genre>中文字幕</genre>", file=code)
+            # if liuchu:
+            #     print("  <genre>无码流出</genre>", file=code)
+            # if uncensored:
+            #     print("  <genre>无码</genre>", file=code)
+            # if hack:
+            #     print("  <genre>破解</genre>", file=code)
+            # if _4k:
+            #     print("  <genre>4k</genre>", file=code)
+            # try:
+            #     for i in tag:
+            #         print("  <genre>" + i + "</genre>", file=code)
+            # except:
+            #     pass
             try:
-                for i in tag:
-                    print("  <genre>" + i + "</genre>", file=code)
+                print("  <genre>" + series + "</genre>", file=code)
             except:
                 pass
             print("  <num>" + number + "</num>", file=code)
