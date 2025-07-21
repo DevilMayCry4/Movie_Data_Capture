@@ -356,7 +356,7 @@ def movie_lists(source_folder, regexstr: str) -> typing.List[str]:
     for full_name in all_file_names:
         start_Index += 1
         if conf.debug():
-            print(f"当前进度: {start_Index}  /{len(all_file_names)}.")
+            print(f"当前进度: {start_Index}  /{all_file_names.len()}.")
         if main_mode != 3 and set(full_name.parent.parts) & escape_folder_set:
             continue
         if not full_name.is_file():
