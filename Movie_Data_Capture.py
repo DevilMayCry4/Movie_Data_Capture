@@ -355,7 +355,7 @@ def movie_lists(source_folder, regexstr: str) -> typing.List[str]:
     # 匹配所有视频文件
     video_files = []
     for ext in video_extensions:
-        video_files.extend(glob.glob(ext))
+        video_files.extend(source.glob(ext))
     start_Index = 0
     for full_name in video_files:
         start_Index += 1
