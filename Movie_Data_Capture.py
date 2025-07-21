@@ -717,6 +717,31 @@ def period(delta, pattern):
     d['m'], d['s'] = divmod(rem, 60)
     return pattern.format(**d)
     
+def scan_directory_worker(args):
+    """进程工作函数"""
+    directory, target_extensions, max_depth = args
+    ext_set = {ext.lower() for ext in target_extensions}
+    files = []
+    
+    def scan_recursive(path, current_depth=0):
+        if max_depth and current_depth > max_depth:
+            return
+        
+        try:
+            with os.scandir(path) as entries:
+                for entry in entries:
+                    if entry.is_file(follow_symlinks=False):
+                        _, ext = os.path.splitext(entry.name)
+                        if ext.lower() in ext_set:
+                            files.append(entry.path)
+                    elif entry.is_dir(follow_symlinks=False):
+                        scan_recursive(entry.path, current_depth + 1)
+        except (PermissionError, OSError):
+            pass
+    
+    scan_recursive(directory)
+    return files
+    
 def find_files_hybrid_parallel(root_dir, target_extensions, max_depth=None):
     """混合进程线程并行查找"""
     # 获取第一级子目录
