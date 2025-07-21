@@ -718,13 +718,14 @@ def find_video_files_optimized(source_dir, video_extensions):
     """优化的视频文件查找函数"""
     # 转换为小写集合以提高查找速度
     ext_set = {ext.lower() for ext in video_extensions}
-    
+    print(ext_set)
     video_files = []
     # 使用os.scandir()获得更好的性能
     with os.scandir(source_dir) as entries:
         for entry in entries:
             if entry.is_file():
                 _, ext = os.path.splitext(entry.name)
+                print(ext)
                 if ext.lower() in ext_set:
                     video_files.append(entry.path)
     
