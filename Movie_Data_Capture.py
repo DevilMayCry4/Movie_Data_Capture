@@ -12,6 +12,8 @@ import signal
 import platform
 import config
 import threading
+from multiprocessing import Pool, cpu_count
+from functools import partial
  
 
 from datetime import datetime, timedelta
@@ -315,6 +317,90 @@ def sigdebug_handler(*args):
 
 
 # 新增失败文件列表跳过处理，及.nfo修改天数跳过处理，提示跳过视频总数，调试模式(-g)下详细被跳过文件，跳过小广告
+def _process_files_serially(video_files, main_mode, debug, escape_folder_set, failed_set, cliRE, trailerRE, nfo_skip_days, conf, total, skip_failed_cnt, skip_nfo_days_cnt):
+    """
+    串行处理视频文件的函数
+    """
+    start_Index = 0
+    for full_name in video_files:
+        start_Index += 1
+        if conf.debug():
+            print(f"当前进度: {start_Index}  文件名{full_name} 进度: {start_Index*1.0/len(video_files)}.")
+        if main_mode != 3 and set(full_name.parent.parts) & escape_folder_set:
+            continue
+        if not full_name.is_file():
+            continue
+        absf = str(full_name)
+        if absf in failed_set:
+            skip_failed_cnt += 1
+            if debug:
+                print('[!]Skip failed movie:', absf)
+            continue
+        is_sym = full_name.is_symlink()
+        if main_mode != 3 and (is_sym or (full_name.stat().st_nlink > 1 and not conf.scan_hardlink())):
+            continue
+        movie_size = 0 if is_sym else full_name.stat().st_size
+        if cliRE and not cliRE.search(absf) or trailerRE.search(full_name.name):
+            continue
+        if main_mode == 3:
+            nfo = full_name.with_suffix('.nfo')
+            if not nfo.is_file():
+                if debug:
+                    print(f"[!]Metadata {nfo.name} not found for '{absf}'")
+            elif nfo_skip_days > 0 and file_modification_days(nfo) <= nfo_skip_days:
+                skip_nfo_days_cnt += 1
+                if debug:
+                    print(f"[!]Skip movie by it's .nfo which modified within {nfo_skip_days} days: '{absf}'")
+                continue
+        total.append(absf)
+    return skip_failed_cnt, skip_nfo_days_cnt
+
+
+def process_video_file_chunk(args):
+    """
+    并行处理视频文件的工作函数
+    """
+    video_files_chunk, main_mode, debug, escape_folder_set, failed_set, cliRE, trailerRE, nfo_skip_days = args
+    
+    valid_files = []
+    skip_failed_cnt = 0
+    skip_nfo_days_cnt = 0
+    
+    for full_name in video_files_chunk:
+        if main_mode != 3 and set(full_name.parent.parts) & escape_folder_set:
+            continue
+        if not full_name.is_file():
+            continue
+        absf = str(full_name)
+        if absf in failed_set:
+            skip_failed_cnt += 1
+            if debug:
+                print('[!]Skip failed movie:', absf)
+            continue
+        is_sym = full_name.is_symlink()
+        if main_mode != 3 and (is_sym or (full_name.stat().st_nlink > 1 and not config.getInstance().scan_hardlink())):
+            continue
+        
+        # 文件大小检查（符号链接跳过）
+        movie_size = 0 if is_sym else full_name.stat().st_size
+        
+        if cliRE and not cliRE.search(absf) or trailerRE.search(full_name.name):
+            continue
+        if main_mode == 3:
+            nfo = full_name.with_suffix('.nfo')
+            if not nfo.is_file():
+                if debug:
+                    print(f"[!]Metadata {nfo.name} not found for '{absf}'")
+            elif nfo_skip_days > 0 and file_modification_days(nfo) <= nfo_skip_days:
+                skip_nfo_days_cnt += 1
+                if debug:
+                    print(f"[!]Skip movie by it's .nfo which modified within {nfo_skip_days} days: '{absf}'")
+                continue
+        valid_files.append(absf)
+    
+    return valid_files, skip_failed_cnt, skip_nfo_days_cnt
+
+
 def movie_lists(source_folder, regexstr: str) -> typing.List[str]:
     conf = config.getInstance()
     main_mode = conf.main_mode()
@@ -356,41 +442,47 @@ def movie_lists(source_folder, regexstr: str) -> typing.List[str]:
     video_files = []
     for ext in video_extensions:
         video_files.extend(source.glob("*" + ext))
-    start_Index = 0
-    for full_name in video_files:
-        start_Index += 1
+    
+    if conf.debug():
+        print(f"找到 {len(video_files)} 个视频文件，开始并行处理...")
+    
+    # 使用并行处理优化文件遍历（如果启用）
+    if len(video_files) > 0 and conf.parallel_processing() and len(video_files) > 10:
+        # 确定并行进程数，最多使用CPU核心数，但不超过文件数
+        num_processes = min(cpu_count(), len(video_files), 8)  # 限制最大进程数为8
+        
+        # 将文件列表分块
+        chunk_size = max(1, len(video_files) // num_processes)
+        file_chunks = [video_files[i:i + chunk_size] for i in range(0, len(video_files), chunk_size)]
+        
         if conf.debug():
-            print(f"当前进度: {start_Index}  文件名{full_name} 进度: {start_Index*1.0/len(video_files)}.")
-        if main_mode != 3 and set(full_name.parent.parts) & escape_folder_set:
-            continue
-        if not full_name.is_file():
-            continue
-        absf = str(full_name)
-        if absf in failed_set:
-            skip_failed_cnt += 1
-            if debug:
-                print('[!]Skip failed movie:', absf)
-            continue
-        is_sym = full_name.is_symlink()
-        if main_mode != 3 and (is_sym or (full_name.stat().st_nlink > 1 and not conf.scan_hardlink())):  # 短路布尔 符号链接不取stat()，因为符号链接可能指向不存在目标
-            continue  # 模式不等于3下跳过软连接和未配置硬链接刮削
-        # 调试用0字节样本允许通过，去除小于120MB的广告'苍老师强力推荐.mp4'(102.2MB)'黑道总裁.mp4'(98.4MB)'有趣的妹子激情表演.MP4'(95MB)'有趣的臺灣妹妹直播.mp4'(15.1MB)
-        movie_size = 0 if is_sym else full_name.stat().st_size  # 同上 符号链接不取stat()及st_size，直接赋0跳过小视频检测
-        # if 0 < movie_size < 125829120:  # 1024*1024*120=125829120
-        #     continue
-        if cliRE and not cliRE.search(absf) or trailerRE.search(full_name.name):
-            continue
-        if main_mode == 3:
-            nfo = full_name.with_suffix('.nfo')
-            if not nfo.is_file():
-                if debug:
-                    print(f"[!]Metadata {nfo.name} not found for '{absf}'")
-            elif nfo_skip_days > 0 and file_modification_days(nfo) <= nfo_skip_days:
-                skip_nfo_days_cnt += 1
-                if debug:
-                    print(f"[!]Skip movie by it's .nfo which modified within {nfo_skip_days} days: '{absf}'")
-                continue
-        total.append(absf)
+            print(f"使用 {num_processes} 个进程并行处理，分为 {len(file_chunks)} 个块")
+        
+        # 准备参数
+        process_args = [(chunk, main_mode, debug, escape_folder_set, failed_set, cliRE, trailerRE, nfo_skip_days) 
+                       for chunk in file_chunks]
+        
+        # 并行处理
+        try:
+            with Pool(processes=num_processes) as pool:
+                results = pool.map(process_video_file_chunk, process_args)
+            
+            # 合并结果
+            for valid_files, skip_failed, skip_nfo_days in results:
+                total.extend(valid_files)
+                skip_failed_cnt += skip_failed
+                skip_nfo_days_cnt += skip_nfo_days
+                
+        except Exception as e:
+            if conf.debug():
+                print(f"并行处理出错，回退到串行处理: {e}")
+            # 回退到原始的串行处理
+            skip_failed_cnt, skip_nfo_days_cnt = _process_files_serially(video_files, main_mode, debug, escape_folder_set, failed_set, cliRE, trailerRE, nfo_skip_days, conf, total, skip_failed_cnt, skip_nfo_days_cnt)
+    else:
+        # 串行处理（文件数量少或禁用并行处理时）
+        if conf.debug() and not conf.parallel_processing():
+            print("并行处理已禁用，使用串行处理")
+        skip_failed_cnt, skip_nfo_days_cnt = _process_files_serially(video_files, main_mode, debug, escape_folder_set, failed_set, cliRE, trailerRE, nfo_skip_days, conf, total, skip_failed_cnt, skip_nfo_days_cnt)
 
     if skip_failed_cnt:
         print(f"[!]Skip {skip_failed_cnt} movies in failed list '{failed_list_txt_path}'.")
@@ -404,15 +496,47 @@ def movie_lists(source_folder, regexstr: str) -> typing.List[str]:
     success_folder = Path(conf.success_folder()).resolve()
     if conf.debug():
         print("开始获取成功文件夹文件")
-    for f in success_folder.glob(r'**/*'):
-        if not re.match(r'\.nfo$', f.suffix, re.IGNORECASE):
-            continue
-        if file_modification_days(f) > nfo_skip_days:
-            continue
-        number = get_number(False, f.stem)
-        if not number:
-            continue
-        skip_numbers.add(number.lower())
+    
+    # 并行处理成功文件夹的.nfo文件扫描
+    nfo_files = list(success_folder.glob(r'**/*.nfo'))
+    if len(nfo_files) > 100:  # 只有文件数量较多时才使用并行处理
+        try:
+            def process_nfo_file(nfo_file):
+                if file_modification_days(nfo_file) > nfo_skip_days:
+                    return None
+                number = get_number(False, nfo_file.stem)
+                return number.lower() if number else None
+            
+            num_processes = min(cpu_count(), len(nfo_files), 4)
+            with Pool(processes=num_processes) as pool:
+                results = pool.map(process_nfo_file, nfo_files)
+            
+            skip_numbers = set(filter(None, results))
+            
+        except Exception as e:
+            if conf.debug():
+                print(f"并行处理.nfo文件出错，回退到串行处理: {e}")
+            # 回退到串行处理
+            for f in nfo_files:
+                if not re.match(r'\.nfo$', f.suffix, re.IGNORECASE):
+                    continue
+                if file_modification_days(f) > nfo_skip_days:
+                    continue
+                number = get_number(False, f.stem)
+                if not number:
+                    continue
+                skip_numbers.add(number.lower())
+    else:
+        # 文件数量较少时使用串行处理
+        for f in success_folder.glob(r'**/*'):
+            if not re.match(r'\.nfo$', f.suffix, re.IGNORECASE):
+                continue
+            if file_modification_days(f) > nfo_skip_days:
+                continue
+            number = get_number(False, f.stem)
+            if not number:
+                continue
+            skip_numbers.add(number.lower())
 
     rm_list = []
     if conf.debug():

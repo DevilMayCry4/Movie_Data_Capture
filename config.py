@@ -187,6 +187,9 @@ class Config:
     def scan_hardlink(self) -> bool:
         return self.conf.getboolean("common", "scan_hardlink", fallback=False)#未找到配置选项,默认不刮削
 
+    def parallel_processing(self) -> bool:
+        return self.conf.getboolean("common", "parallel_processing", fallback=True)#未找到配置选项,默认启用并行处理
+
     def failed_move(self) -> bool:
         return self.conf.getboolean("common", "failed_move")
 
