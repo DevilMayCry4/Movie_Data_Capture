@@ -12,9 +12,7 @@ import signal
 import platform
 import config
 import threading
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
-from pathlib import Path
-import multiprocessing as mp
+ 
 
 from datetime import datetime, timedelta
 from lxml import etree
@@ -355,7 +353,9 @@ def movie_lists(source_folder, regexstr: str) -> typing.List[str]:
     if conf.debug():
         print("开始获取全部文件夹文件") 
     # 匹配所有视频文件
-    video_files = find_files_hybrid_parallel(source_folder,video_extensions)
+    video_files = []
+    for ext in video_extensions:
+        video_files.extend(source.glob("*" + ext))
     start_Index = 0
     for full_name in video_files:
         start_Index += 1
@@ -716,66 +716,7 @@ def period(delta, pattern):
     d['h'], rem = divmod(delta.seconds, 3600)
     d['m'], d['s'] = divmod(rem, 60)
     return pattern.format(**d)
-def scan_directory_worker(args):
-    """进程工作函数"""
-    directory, target_extensions, max_depth = args
-    ext_set = {ext.lower() for ext in target_extensions}
-    files = []
-    
-    def scan_recursive(path, current_depth=0):
-        if max_depth and current_depth > max_depth:
-            return
-        
-        try:
-            with os.scandir(path) as entries:
-                for entry in entries:
-                    if entry.is_file(follow_symlinks=False):
-                        _, ext = os.path.splitext(entry.name)
-                        if ext.lower() in ext_set:
-                            files.append(entry.path)
-                    elif entry.is_dir(follow_symlinks=False):
-                        scan_recursive(entry.path, current_depth + 1)
-        except (PermissionError, OSError):
-            pass
-    
-    scan_recursive(directory)
-    return files
-    
-def find_files_hybrid_parallel(root_dir, target_extensions, max_depth=None):
-    """混合进程线程并行查找"""
-    # 获取第一级子目录
-    root_path = Path(root_dir)
-    try:
-        first_level_dirs = [str(d) for d in root_path.iterdir() if d.is_dir()]
-    except (PermissionError, OSError):
-        first_level_dirs = []
-    
-    if not first_level_dirs:
-        return scan_directory_worker((root_dir, target_extensions, max_depth))
-    
-    # 准备进程参数
-    process_args = [(d, target_extensions, max_depth) for d in first_level_dirs]
-    
-    # 使用进程池处理大目录
-    cpu_count = mp.cpu_count()
-    max_processes = min(len(first_level_dirs), cpu_count)
-    
-    all_files = []
-    with ProcessPoolExecutor(max_workers=max_processes) as executor:
-        results = executor.map(scan_directory_worker, process_args)
-        for result in results:
-            all_files.extend(result)
-    
-    # 处理根目录下的直接文件
-    ext_set = {ext.lower() for ext in target_extensions}
-    try:
-        for file in root_path.iterdir():
-            if file.is_file() and file.suffix.lower() in ext_set:
-                all_files.append(str(file))
-    except (PermissionError, OSError):
-        pass
-    
-    return all_files
+
 
 
 
