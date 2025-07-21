@@ -989,7 +989,7 @@ def core_main(movie_path, number_th, oCC, specified_source=None, specified_url=N
 
     # main_mode
     #  1: 刮削模式 / Scraping mode
-    #  2: 整理模式 / Organizing mode
+    #  2: 更新模式 /只更新nfo文件 
     #  3：不改变路径刮削
     if conf.main_mode() == 1:
         # 创建文件夹
@@ -1053,22 +1053,23 @@ def core_main(movie_path, number_th, oCC, specified_source=None, specified_url=N
                     json_data.get('actor_list'), liuchu, uncensored, hack, hack_word
                     , _4k, fanart_path, poster_path, thumb_path, iso)
 
-    elif conf.main_mode() == 2:
-        # 创建文件夹
-        path = create_folder(json_data)
-        # 移动文件
-        paste_file_to_folder_mode2(movie_path, path, multi_part, number, part, leak_word, c_word, hack_word)
+    # elif conf.main_mode() == 2:
+    #     # 创建文件夹
+    #     path = create_folder(json_data)
+    #     # 移动文件
+    #     paste_file_to_folder_mode2(movie_path, path, multi_part, number, part, leak_word, c_word, hack_word)
 
-        # Move subtitles
-        move_subtitles(movie_path, path, multi_part, number, part, leak_word, c_word, hack_word)
-
-    elif conf.main_mode() == 3:
+    #     # Move subtitles
+    #     move_subtitles(movie_path, path, multi_part, number, part, leak_word, c_word, hack_word)
+ 
+    elif conf.main_mode() == 3 or conf.main_mode() == 2:
         path = str(Path(movie_path).parent)
+        is_download_img = conf.main_mode() == 3
         if multi_part == 1:
             number += part  # 这时number会被附加上CD1后缀
 
         # 检查小封面, 如果image cut为3，则下载小封面
-        if imagecut == 3:
+        if imagecut == 3 and is_download_img:
             if 'headers' in json_data:
                 small_cover_check(path, poster_path, json_data.get('cover_small'), movie_path, json_data)
             else:
@@ -1076,39 +1077,42 @@ def core_main(movie_path, number_th, oCC, specified_source=None, specified_url=N
 
         # creatFolder会返回番号路径
         if 'headers' in json_data:
-            image_download(cover, fanart_path, thumb_path, path, movie_path, json_data)
+            if is_download_img:
+                image_download(cover, fanart_path, thumb_path, path, movie_path, json_data)
         else:
-            image_download(cover, fanart_path, thumb_path, path, movie_path)
+            if is_download_img:
+               image_download(cover, fanart_path, thumb_path, path, movie_path)
 
         if not multi_part or part.lower() == '-cd1':
             try:
                 # 下载预告片
-                if conf.is_trailer() and json_data.get('trailer'):
+                if conf.is_trailer() and json_data.get('trailer') and is_download_img:
                     trailer_download(json_data.get('trailer'), leak_word, c_word, hack_word, number, path, movie_path)
 
                 # 下载剧照 data, path, filepath
-                if conf.is_extrafanart() and json_data.get('extrafanart'):
+                if conf.is_extrafanart() and json_data.get('extrafanart') and is_download_img:
                     if 'headers' in json_data:
                         extrafanart_download(json_data.get('extrafanart'), path, number, movie_path, json_data)
                     else:
                         extrafanart_download(json_data.get('extrafanart'), path, number, movie_path)
 
                 # 下载演员头像 KODI .actors 目录位置
-                if conf.download_actor_photo_for_kodi():
+                if conf.download_actor_photo_for_kodi() and is_download_img:
                     actor_photo_download(json_data.get('actor_photo'), path, number)
             except:
                 pass
 
         # 裁剪图
-        cutImage(imagecut, path, fanart_path, poster_path, bool(conf.face_uncensored_only() and not uncensored))
+        if   is_download_img:
+            cutImage(imagecut, path, fanart_path, poster_path, bool(conf.face_uncensored_only() and not uncensored))
 
         # 添加水印
-        if conf.is_watermark():
+        if conf.is_watermark() and is_download_img:
             add_mark(os.path.join(path, poster_path), os.path.join(path, fanart_path), cn_sub, leak, uncensored, hack,
                      _4k, iso)
 
         # 兼容Jellyfin封面图文件名规则
-        if multi_part and conf.jellyfin_multi_part_fanart():
+        if multi_part and conf.jellyfin_multi_part_fanart() and is_download_img:
             linkImage(path, number_th, part, leak_word, c_word, hack_word, ext)
 
         # 最后输出.nfo元数据文件，以完成.nfo文件创建作为任务成功标志
