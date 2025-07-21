@@ -12,5 +12,5 @@ For the new functions you need, you can contact me through the contact informati
 对于需要的新功能，可通过下方联系方式联系我有偿解决（支持众筹），我会尽快响应，会在下一个版本交付
 
 # 联系方式 Contact：
-* Email    : yoshiko2.dev@gmail.com
-* Telegram : https://t.me/yoshiko2
+* Email    : DevilMayCry4.dev@gmail.com
+* Telegram : https://t.me/DevilMayCry4

@@ -2,7 +2,7 @@ ARG BASE
 FROM $BASE
 
 LABEL maintainer="VergilGao"
-LABEL build_from="https://github.com/yoshiko2/Movie_Data_Capture"
+LABEL build_from="https://github.com/DevilMayCry4/Movie_Data_Capture"
 LABEL org.opencontainers.image.source="https://github.com/VergilGao/docker-mdc"
 
 ENV TZ="Asia/Shanghai"

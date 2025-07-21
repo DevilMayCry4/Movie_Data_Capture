@@ -32,10 +32,10 @@ bash .beagle/build.sh
 
 ## git
 
-<https://github.com/yoshiko2/Movie_Data_Capture>
+<https://github.com/DevilMayCry4/Movie_Data_Capture>
 
 ```bash
-git remote add upstream git@github.com:yoshiko2/Movie_Data_Capture.git
+git remote add upstream git@github.com:DevilMayCry4/Movie_Data_Capture.git
 
 git fetch upstream
 
