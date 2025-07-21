@@ -358,7 +358,7 @@ def movie_lists(source_folder, regexstr: str) -> typing.List[str]:
         start_Index += 1
         if conf.debug():
             print(f"当前进度: {start_Index}  文件名{full_name} 进度: {start_Index*1.0/len(video_files)}.")
-        if main_mode != 3 and set(full_name.parent.parts) & escape_folder_set:
+        if main_mode != 3 and escape_folder_set:
             continue
         if not full_name.is_file():
             continue
