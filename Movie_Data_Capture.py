@@ -351,7 +351,11 @@ def movie_lists(source_folder, regexstr: str) -> typing.List[str]:
     escape_folder_set = set(re.split("[,，]", conf.escape_folder()))
     if conf.debug():
         print("开始获取全部文件夹文件")
-    for full_name in source.glob(r'**/*'):
+    all_file_names = source.glob(r'**/*')
+    start_Index = 0
+    for full_name in all_file_names:
+        if conf.debug():
+            print(f"当前进度: {start_Index} / {len(all_file_names)}.")
         if main_mode != 3 and set(full_name.parent.parts) & escape_folder_set:
             continue
         if not full_name.is_file():
