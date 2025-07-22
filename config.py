@@ -94,7 +94,7 @@ class Config:
             #     os._exit(3)
             #     #self.conf = self._default_config()
 
-    def set_override(self, option_cmd: str):
+    def set_override(self, option_cmd, silent=False):
         """
         通用的参数覆盖选项 -C 配置覆盖串
         配置覆盖串语法：小节名:键名=值[;[小节名:]键名=值][;[小节名:]键名+=值]  多个键用分号分隔 名称可省略部分尾部字符
@@ -159,7 +159,7 @@ class Config:
                 err_exit(f"[-]Conig overide Key name '{key}' not found! cmd='{cmd}'")
             if assign == "+=":
                 val = keys[key_name] + val
-            if self.debug():
+            if self.debug() and not silent:
                 print(f"[!]Set config override [{sec_name}]{key_name}={val}  by cmd='{cmd}'")
             self.conf.set(sec_name, key_name, val)
 

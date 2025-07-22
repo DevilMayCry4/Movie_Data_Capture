@@ -216,7 +216,7 @@ def close_logfile(logdir: str):
                 f.unlink(missing_ok=True)
             except:
                 pass
-    # 合并日志 只检测日志目录内的文本日志，忽略子目录。三天前的日志，按日合并为单个日志，三个月前的日志，
+    # 合并日志 只检测日志目录内的文本日志，忽略子目录。三天前的日志，按日合并为一份日志，三个月前的日志，
     # 按月合并为单个月志，去年及以前的月志，今年4月以后将之按年合并为年志
     # 测试步骤：
     """
@@ -309,8 +309,11 @@ def signal_handler(*args):
 
 def sigdebug_handler(*args):
     conf = config.getInstance()
-    conf.set_override(f"debug_mode:switch={int(not conf.debug())}")
-    print(f"[!]Debug {('oFF', 'On')[int(conf.debug())]}")
+    # 避免在信号处理器中打印，只修改配置
+    debug_value = int(not conf.debug())
+    conf.set_override(f"debug_mode:switch={debug_value}", silent=True)
+    # 使用信号安全的方式输出信息
+    os.write(1, f"[!]Debug {('oFF', 'On')[debug_value]}\n".encode())
 
 
 # 新增失败文件列表跳过处理，及.nfo修改天数跳过处理，提示跳过视频总数，调试模式(-g)下详细被跳过文件，跳过小广告
@@ -370,7 +373,10 @@ def movie_lists(source_folder, regexstr: str) -> typing.List[str]:
             # 只处理符合条件的文件
             for file in files:
                 if any(file.lower().endswith(ext) for ext in file_types):
-                    yield Path(os.path.join(root, file))
+                    full_path = Path(os.path.join(root, file))
+                    # 打印当前正在处理的文件路径
+                    print(f"[*] Processing file: {full_path}")
+                    yield full_path
     
     # 使用生成器逐个处理文件
     start_Index = 0
