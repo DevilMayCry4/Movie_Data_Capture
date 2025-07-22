@@ -400,7 +400,7 @@ def movie_lists(source_folder, regexstr: str) -> typing.List[str]:
         #     continue
         if cliRE and not cliRE.search(absf) or trailerRE.search(full_name.name):
             continue
-        if main_mode == 3:
+        if main_mode == 3 or main_mode == 2:
             nfo = full_name.with_suffix('.nfo')
             if not nfo.is_file():
                 if debug:
