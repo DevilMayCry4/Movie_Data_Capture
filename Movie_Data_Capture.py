@@ -12,7 +12,8 @@ import signal
 import platform
 import config
 import threading
-
+from concurrent.futures import ThreadPoolExecutor 
+import multiprocessing
 from datetime import datetime, timedelta
 from lxml import etree
 from pathlib import Path
@@ -296,7 +297,7 @@ def close_logfile(logdir: str):
             except:
                 pass
     # 第四步，压缩年志 如果有压缩需求，请自行手工压缩，或者使用外部脚本来定时完成。推荐nongnu的lzip，对于
-    # 这种粒度的文本日志，压缩比是目前最好的。lzip -9的运行参数下，日志压缩比要高于xz -9，而且内存占用更少，
+    # 这种粒度的文本日志，压缩比currently best.lzip -9的运行参数下，日志压缩比要高于xz -9，而且内存占用更少，
     # 多核利用率更高(plzip多线程版本)，解压速度更快。压缩后的大小差不多是未压缩时的2.4%到3.7%左右，
     # 100MB的日志文件能缩小到3.7MB。
     return filepath
@@ -362,19 +363,83 @@ def movie_lists(source_folder, regexstr: str) -> typing.List[str]:
     
     # 使用生成器模式，避免一次性加载所有文件到内存
     def file_generator(source_path, file_types, escape_folders, main_mode):
-    #生成器函数，逐个产生符合条件的文件
-        for root, dirs, files in os.walk(str(source_path)):
-            # 过滤掉不需要的目录
-            if main_mode == 1:
-                root_parts = set(Path(root).parts)
-                if root_parts & escape_folders:
-                    continue
+        # 生成器函数，逐个产生符合条件的文件
+        conf = config.getInstance()
+        use_parallel = conf.parallel_processing()
+        file_types_set = set(file_types)  # 转换为集合，提高查找效率
+        escape_folders_set = set(escape_folders)  # 确保是集合类型
+        
+        # 预先编译正则表达式，避免重复编译
+        file_pattern = re.compile('|'.join([f'.*\.{ext[1:]}$' for ext in file_types_set]), re.IGNORECASE)
+        
+        if use_parallel and main_mode == 1:
+            # 并行处理模式
+            from concurrent.futures import ThreadPoolExecutor
+            import multiprocessing
             
-            # 只处理符合条件的文件
-            for file in files:
-                if any(file.lower().endswith(ext) for ext in file_types):
+            def process_directory(root):
+                results = []
+                # 过滤掉不需要的目录
+                if main_mode == 1:
+                    root_parts = set(Path(root).parts)
+                    if root_parts & escape_folders_set:
+                        return results
+                
+                try:
+                    # 使用os.scandir比os.listdir更高效
+                    for entry in os.scandir(root):
+                        if entry.is_file() and file_pattern.match(entry.name.lower()):
+                            full_path = Path(entry.path)
+                            results.append(full_path)
+                except (PermissionError, OSError):
+                    pass  # 忽略权限错误
+                return results
+            
+            def walk_directory(source):
+                dirs_to_scan = [source]
+                while dirs_to_scan:
+                    current_dir = dirs_to_scan.pop(0)
+                    try:
+                        # 获取当前目录下的所有子目录
+                        with os.scandir(current_dir) as entries:
+                            for entry in entries:
+                                if entry.is_dir() and not entry.is_symlink():
+                                    # 过滤掉不需要的目录
+                                    if main_mode == 1:
+                                        dir_parts = set(Path(entry.path).parts)
+                                        if not dir_parts & escape_folders_set:
+                                            dirs_to_scan.append(entry.path)
+                                    else:
+                                        dirs_to_scan.append(entry.path)
+                    except (PermissionError, OSError):
+                        pass  # 忽略权限错误
+                return dirs_to_scan
+            
+            # 获取所有需要扫描的目录
+            all_dirs = [str(source_path)] + walk_directory(str(source_path))
+            
+            # 使用线程池并行处理目录
+            num_workers = min(multiprocessing.cpu_count() * 2, len(all_dirs))
+            with ThreadPoolExecutor(max_workers=num_workers) as executor:
+                for file_batch in executor.map(process_directory, all_dirs):
+                    for full_path in file_batch:
+                        print(f"[*] Processing file: {full_path}")
+                        yield full_path
+        else:
+            # 串行处理模式 - 优化版本
+            for root, dirs, files in os.walk(str(source_path)):
+                # 过滤掉不需要的目录
+                if main_mode == 1:
+                    root_parts = set(Path(root).parts)
+                    if root_parts & escape_folders_set:
+                        continue
+                
+                # 使用列表推导式一次性过滤文件，减少循环次数
+                matching_files = [file for file in files if any(file.lower().endswith(ext) for ext in file_types)]
+                
+                # 批量处理匹配的文件
+                for file in matching_files:
                     full_path = Path(os.path.join(root, file))
-                    # 打印当前正在处理的文件路径
                     print(f"[*] Processing file: {full_path}")
                     yield full_path
     
@@ -745,7 +810,7 @@ def period(delta, pattern):
 
 
 if __name__ == '__main__':
-    version = '2.0.10'
+    version = '2.0.11'
     urllib3.disable_warnings()  # Ignore http proxy warning
     app_start = time.time()
 
