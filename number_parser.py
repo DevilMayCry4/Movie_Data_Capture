@@ -10,6 +10,22 @@ G_spat = re.compile(
     "(-|_)(fhd|hd|sd|1080p|720p|4K|x264|x265|uncensored|hack|leak)",
     re.IGNORECASE)
 
+def clean_filename(filename):
+    """
+    清理文件名，移除网站域名等干扰信息
+    
+    Args:
+        filename (str): 原始文件名
+        
+    Returns:
+        str: 清理后的文件名
+    """
+    # 移除网站域名（包括 @ 符号前的所有内容）
+    cleaned = re.sub(r'^.*?@', '', filename)
+    # 移除方括号中的内容
+    cleaned = re.sub(r'\[.*?\]', '', cleaned)
+    return cleaned
+    
 
 def get_number(debug: bool, file_path: str) -> str:
     """
@@ -38,6 +54,7 @@ def get_number(debug: bool, file_path: str) -> str:
     'snis-829'
     """
     filepath = os.path.basename(file_path)
+    filepath = clean_filename(filepath)
     # debug True 和 False 两块代码块合并，原因是此模块及函数只涉及字符串计算，没有IO操作，debug on时输出导致异常信息即可
     try:
         # 先对自定义正则进行匹配
