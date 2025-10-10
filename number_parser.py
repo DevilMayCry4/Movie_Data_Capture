@@ -61,8 +61,11 @@ def get_number(debug: bool, file_path: str) -> str:
         if config.getInstance().number_regexs().split().__len__() > 0:
             for regex in config.getInstance().number_regexs().split():
                 try:
-                    if re.search(regex, filepath):
-                        return re.search(regex, filepath).group()
+                    match = re.search(regex, filepath)
+                    if match:
+                         letters = match.group(1).upper()
+                         numbers = match.group(2)
+                         return f"{letters}-{numbers}"
                 except Exception as e:
                     print(f'[-]custom regex exception: {e} [{regex}]')
 
