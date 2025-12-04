@@ -608,6 +608,7 @@ def paste_file_to_folder(filepath, path, multi_part, number, part, leak_word, c_
         # 任何情况下都不要覆盖，以免遭遇数据源或者引擎错误导致所有文件得到同一个number，逐一
         # 同名覆盖致使全部文件损失且不可追回的最坏情况
         if os.path.exists(targetpath):
+            moveFailedFolder(targetpath)
             raise FileExistsError('File Exists on destination path, we will never overwriting.')
         link_mode = config.getInstance().link_mode()
         # 如果link_mode 1: 建立软链接 2: 硬链接优先、无法建立硬链接再尝试软链接。
@@ -655,6 +656,7 @@ def paste_file_to_folder_mode2(filepath, path, multi_part, number, part, leak_wo
 
     targetpath = os.path.join(path, f"{number}{part}{leak_word}{c_word}{hack_word}{houzhui}")
     if os.path.exists(targetpath):
+        moveFailedFolder(targetpath)
         raise FileExistsError('File Exists on destination path, we will never overwriting.')
     try:
         link_mode = config.getInstance().link_mode()
