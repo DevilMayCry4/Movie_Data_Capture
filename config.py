@@ -384,6 +384,31 @@ class Config:
         except:
             return False
 
+    def use_llm(self) -> bool:
+        """ 是否启用大模型解决站点的"问题验证"(如 javbus driver-verify)"""
+        try:
+            return self.conf.getboolean("llm", "switch")
+        except:
+            return False
+
+    def llm_api_url(self) -> str:
+        try:
+            return self.conf.get("llm", "api_url").strip()
+        except:
+            return ""
+
+    def llm_api_key(self) -> str:
+        try:
+            return self.conf.get("llm", "api_key").strip()
+        except:
+            return ""
+
+    def llm_model(self) -> str:
+        try:
+            return self.conf.get("llm", "model").strip()
+        except:
+            return "glm-4-flash"
+
     def is_storyline(self) -> bool:
         try:
             return self.conf.getboolean("storyline", "switch")

@@ -12,6 +12,7 @@
 #fi
 pip3 install -r requirements.txt
 pip3 install cloudscraper==1.2.52
+playwright install chromium
 pyinstaller --onefile Movie_Data_Capture.py  --hidden-import ADC_function.py --hidden-import core.py \
     --hidden-import "ImageProcessing.cnn" \
     --python-option u \

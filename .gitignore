@@ -2,6 +2,9 @@
 __pycache__/
 *.py[cod]
 *$py.class
+/.pw-browser/*
+# 虚拟环境文件夹
+.venv/
 
 # C extensions
 *.so
@@ -114,3 +117,4 @@ failed/*
 .idea
 
 .python/
+.pw-browsers/*

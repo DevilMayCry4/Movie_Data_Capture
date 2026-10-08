@@ -15,3 +15,6 @@ urllib3==1.25.11
 certifi
 MechanicalSoup
 opencc-python-reimplemented
+# Debian 11 (bullseye) x64 不再被新版本 Playwright 的 chromium 支持,
+# 因此锁定到仍支持 debian11-x64 的版本。
+playwright==1.49.1
