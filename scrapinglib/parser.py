@@ -119,15 +119,45 @@ class Parser:
 
     def getHtml(self, url, type = None):
         """ 访问网页
+
+        当纯 HTTP 请求被站点拦截(空正文/年龄验证/JS质询等)时:
+        - 若 config 开启了 `[scraper] use_browser=1` 且已安装 playwright, 则改用真实浏览器抓取;
+        - 否则视为未命中返回 404, 让上层顺延到其它数据源。
         """
         resp = httprequest.get(url, cookies=self.cookies, proxies=self.proxies, extra_headers=self.extraheader, verify=self.verify, return_type=type)
-        if '<title>404 Page Not Found' in resp \
-            or '<title>未找到页面' in resp \
-            or '404 Not Found' in resp \
-            or '<title>404' in resp \
-            or '<title>お探しの商品が見つかりません' in resp:
+        if not isinstance(resp, str):
+            return resp
+        if self.is_blocked_page(resp):
+            if config.getInstance().use_browser():
+                from . import browser
+                _ua = self.extraheader.get('User-Agent') if isinstance(self.extraheader, dict) else None
+                browser_resp = browser.get(url, cookies=self.cookies, ua=_ua)
+                if isinstance(browser_resp, str) and not self.is_blocked_page(browser_resp):
+                    return browser_resp
             return 404
         return resp
+
+    def is_blocked_page(self, resp: str) -> bool:
+        """ 判断响应是否为"无内容/反爬/拦截页面"，而非真正的影片详情页 """
+        if not resp.strip():  # 站点对非浏览器客户端返回空正文
+            return True
+        low = resp[:3000].lower()
+        if '<title>404 page not found' in low \
+            or '<title>未找到页面' in low \
+            or '404 not found' in low \
+            or '<title>404' in low \
+            or '<title>お探しの商品が見つかりません' in low:
+            return True
+        # javbus 年龄验证弹窗
+        if '<title>age verification javbus' in low or 'id="ageverify"' in low:
+            return True
+        # 浏览器 JS 质询(如 mirror 域名返回的 "Loading..." + ch=1 跳转)
+        if '<title>loading...' in low and 'window.location.replace' in low:
+            return True
+        # Cloudflare / 冷启动 HTTP 质询
+        if 'just a moment' in low and ('cf-challenge' in low or 'cf-' in low):
+            return True
+        return False
 
     def getHtmlTree(self, url, type = None):
         """ 访问网页,返回`etree`

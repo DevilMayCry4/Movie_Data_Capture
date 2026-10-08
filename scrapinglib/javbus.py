@@ -82,7 +82,7 @@ class Javbus(Parser):
             result = self.dictformat(htmltree)
             return result
         except:
-            self.searchUncensored(number)
+            return self.searchUncensored(number)
 
     def dictformat(self, htmltree):
         try:
@@ -143,8 +143,10 @@ class Javbus(Parser):
 
     def getTitle(self, htmltree):
         title = super().getTitle(htmltree)
-        title = str(re.findall('^.+?\s+(.*) - JavBus$', title)[0]).strip()
-        return title
+        finds = re.findall('^.+?\s+(.*) - JavBus$', title)
+        if finds:
+            return str(finds[0]).strip()
+        return title.strip()
 
     def getStudio(self, htmltree):
         if self.uncensored:

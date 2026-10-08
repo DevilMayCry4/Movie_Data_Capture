@@ -377,6 +377,13 @@ class Config:
     def debug(self) -> bool:
         return self.conf.getboolean("debug_mode", "switch")
 
+    def use_browser(self) -> bool:
+        """ 是否启用浏览器客户端抓取(Playwright),用于绕过站点反爬/年龄验证"""
+        try:
+            return self.conf.getboolean("scraper", "use_browser")
+        except:
+            return False
+
     def is_storyline(self) -> bool:
         try:
             return self.conf.getboolean("storyline", "switch")
@@ -508,6 +515,10 @@ class Config:
         sec8 = "debug_mode"
         conf.add_section(sec8)
         conf.set(sec8, "switch", "0")
+
+        scraper = "scraper"
+        conf.add_section(scraper)
+        conf.set(scraper, "use_browser", "0")
 
         sec9 = "translate"
         conf.add_section(sec9)
